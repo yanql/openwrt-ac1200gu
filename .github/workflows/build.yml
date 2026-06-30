@@ -17,11 +17,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libncurses5-dev zstd unzip wget file
 
-      - name: Download OpenWrt ImageBuilder 24.10.1 (ramips/mt7621)
+      - name: Download OpenWrt ImageBuilder 24.10.7 (ramips/mt7621)
         run: |
-          wget -q https://downloads.openwrt.org/releases/24.10.1/targets/ramips/mt7621/openwrt-imagebuilder-24.10.1-ramips-mt7621.Linux-x86_64.tar.zst
-          tar --use-compress-program=unzstd -xf openwrt-imagebuilder-24.10.1-ramips-mt7621.Linux-x86_64.tar.zst
-          mv openwrt-imagebuilder-24.10.1-ramips-mt7621.Linux-x86_64 ib
+          wget -q https://downloads.openwrt.org/releases/24.10.7/targets/ramips/mt7621/openwrt-imagebuilder-24.10.7-ramips-mt7621.Linux-x86_64.tar.zst
+          tar --use-compress-program=unzstd -xf openwrt-imagebuilder-24.10.7-ramips-mt7621.Linux-x86_64.tar.zst
+          mv openwrt-imagebuilder-24.10.7-ramips-mt7621.Linux-x86_64 ib
           echo "IB=$PWD/ib" >> $GITHUB_ENV
 
       - name: Fetch PassWall2 packages (mipsel_24kc)
