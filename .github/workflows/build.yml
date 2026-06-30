@@ -31,30 +31,29 @@ jobs:
           sed -i 's|$(if $(IB),,awk|$(if $(IB),:,awk|' "$f"
           echo "--- 补丁后 ---"; grep -n 'if $(IB)' "$f" || true
 
-      - name: Fetch PassWall2 packages (mipsel_24kc)
+      - name: Fetch SSR Plus+ and SSR cores (mipsel_24kc)
         if: ${{ github.event.inputs.pkgmode != 'clean' }}
         run: |
-          base=https://github.com/Openwrt-Passwall/openwrt-passwall2/releases/download/26.6.16-1
           mkdir -p dl
-          wget -q -P dl $base/luci-app-passwall2_26.6.16-r1_all.ipk
-          wget -q -P dl $base/luci-i18n-passwall2-zh-cn_26.6.16_all.ipk
-          wget -q -P dl $base/passwall_packages_ipk_mipsel_24kc.zip
+          # SSR Plus+ 应用
+          wget -q -P dl https://github.com/fw876/helloworld/releases/download/v196.2/luci-app-ssr-plus_196-r2_all.ipk
+          # 复用 passwall 包集里的 SSR 核心与小依赖
+          wget -q -P dl https://github.com/Openwrt-Passwall/openwrt-passwall2/releases/download/26.6.16-1/passwall_packages_ipk_mipsel_24kc.zip
           unzip -o -q dl/passwall_packages_ipk_mipsel_24kc.zip -d dl/pw
-          # 把所有 ipk 放进 ImageBuilder 本地源
           find dl -name '*.ipk' -exec cp -f {} "$IB/packages/" \;
           echo "=== 本地源 ipk 数量 ==="; ls "$IB/packages/" | wc -l
 
-      - name: Build firmware (PassWall2 + SSR 轻量核心)
+      - name: Build firmware (SSR Plus+ + SSR 轻量核心)
         run: |
           cd "$IB"
           if [ "${{ github.event.inputs.pkgmode }}" = "clean" ]; then
             echo ">>> 纯净镜像(无额外包)"
             make image PROFILE="asus_rt-ac57u-v1"
           else
-            echo ">>> 带 PassWall2"
+            echo ">>> 带 SSR Plus+"
             make image \
               PROFILE="asus_rt-ac57u-v1" \
-              PACKAGES="luci luci-ssl luci-i18n-base-zh-cn luci-app-passwall2 luci-i18n-passwall2-zh-cn shadowsocksr-libev-ssr-redir shadowsocksr-libev-ssr-local simple-obfs-client chinadns-ng tcping -dnsmasq dnsmasq-full -v2ray-geoip -v2ray-geosite -geoview"
+              PACKAGES="luci luci-ssl luci-i18n-base-zh-cn luci-app-ssr-plus shadowsocksr-libev-ssr-redir simple-obfs-client -dnsmasq dnsmasq-full"
           fi
 
       - name: Show results
