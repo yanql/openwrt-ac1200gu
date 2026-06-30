@@ -54,7 +54,7 @@ jobs:
             echo ">>> 带 PassWall2"
             make image \
               PROFILE="asus_rt-ac57u-v1" \
-              PACKAGES="luci luci-ssl luci-i18n-base-zh-cn luci-app-passwall2 luci-i18n-passwall2-zh-cn shadowsocksr-libev-ssr-redir shadowsocksr-libev-ssr-local simple-obfs-client chinadns-ng tcping -dnsmasq dnsmasq-full"
+              PACKAGES="luci luci-ssl luci-i18n-base-zh-cn luci-app-passwall2 luci-i18n-passwall2-zh-cn shadowsocksr-libev-ssr-redir shadowsocksr-libev-ssr-local simple-obfs-client chinadns-ng tcping -dnsmasq dnsmasq-full -v2ray-geoip -v2ray-geosite -geoview"
           fi
 
       - name: Show results
