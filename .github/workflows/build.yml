@@ -2,6 +2,11 @@ name: build-openwrt-ac1200gu
 
 on:
   workflow_dispatch:
+    inputs:
+      pkgmode:
+        description: 'clean = 纯净镜像; full = 带PassWall2'
+        required: false
+        default: 'full'
 
 jobs:
   build:
@@ -34,13 +39,15 @@ jobs:
       - name: Build firmware (PassWall2 + SSR 轻量核心)
         run: |
           cd "$IB"
-          make image \
-            PROFILE="asus_rt-ac57u-v1" \
-            PACKAGES="luci luci-ssl luci-i18n-base-zh-cn \
-                      luci-app-passwall2 luci-i18n-passwall2-zh-cn \
-                      shadowsocksr-libev-ssr-redir shadowsocksr-libev-ssr-local \
-                      simple-obfs-client chinadns-ng tcping \
-                      -dnsmasq dnsmasq-full"
+          if [ "${{ github.event.inputs.pkgmode }}" = "clean" ]; then
+            echo ">>> 纯净镜像(无额外包)"
+            make image PROFILE="asus_rt-ac57u-v1"
+          else
+            echo ">>> 带 PassWall2"
+            make image \
+              PROFILE="asus_rt-ac57u-v1" \
+              PACKAGES="luci luci-ssl luci-i18n-base-zh-cn luci-app-passwall2 luci-i18n-passwall2-zh-cn shadowsocksr-libev-ssr-redir shadowsocksr-libev-ssr-local simple-obfs-client chinadns-ng tcping -dnsmasq dnsmasq-full"
+          fi
 
       - name: Show results
         run: |
