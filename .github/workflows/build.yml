@@ -25,6 +25,7 @@ jobs:
           echo "IB=$PWD/ib" >> $GITHUB_ENV
 
       - name: Fetch PassWall2 packages (mipsel_24kc)
+        if: ${{ github.event.inputs.pkgmode != 'clean' }}
         run: |
           base=https://github.com/Openwrt-Passwall/openwrt-passwall2/releases/download/26.6.16-1
           mkdir -p dl
