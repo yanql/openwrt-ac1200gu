@@ -1,0 +1,55 @@
+name: build-immortalwrt-ac1200gu
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Prepare tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses5-dev zstd unzip wget file
+
+      - name: Download ImmortalWrt ImageBuilder 24.10.6 (ramips/mt7621)
+        run: |
+          wget -q https://downloads.immortalwrt.org/releases/24.10.6/targets/ramips/mt7621/immortalwrt-imagebuilder-24.10.6-ramips-mt7621.Linux-x86_64.tar.zst
+          tar --use-compress-program=unzstd -xf immortalwrt-imagebuilder-24.10.6-ramips-mt7621.Linux-x86_64.tar.zst
+          mv immortalwrt-imagebuilder-24.10.6-ramips-mt7621.Linux-x86_64 ib
+          echo "IB=$PWD/ib" >> $GITHUB_ENV
+
+      - name: Patch rootfs.mk (fix IB empty-command syntax bug)
+        run: |
+          f="$PWD/ib/include/rootfs.mk"
+          grep -n 'if $(IB)' "$f" || true
+          sed -i 's|$(if $(IB),,awk|$(if $(IB),:,awk|' "$f"
+          echo "--- patched ---"; grep -n 'if $(IB)' "$f" || true
+
+      - name: Show available profiles
+        run: |
+          cd "$IB"
+          make info | grep -A4 "asus_rt-ac57u-v1"
+
+      - name: Build firmware (PassWall + SSR core)
+        run: |
+          cd "$IB"
+          make image \
+            PROFILE="asus_rt-ac57u-v1" \
+            PACKAGES="luci luci-i18n-base-zh-cn luci-i18n-firewall-zh-cn luci-app-passwall luci-i18n-passwall-zh-cn shadowsocksr-libev-ssr-redir -dnsmasq dnsmasq-full"
+
+      - name: Show results
+        run: |
+          cd "$IB"
+          echo "=== 产物 ==="
+          ls -lh bin/targets/ramips/mt7621/*.bin
+          echo "=== sysupgrade 大小 ==="
+          ls -l bin/targets/ramips/mt7621/*sysupgrade.bin | awk '{printf "%.2f MB\n", $5/1024/1024}'
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: immortalwrt-ac1200gu-passwall
+          path: |
+            ${{ env.IB }}/bin/targets/ramips/mt7621/*sysupgrade.bin
+            ${{ env.IB }}/bin/targets/ramips/mt7621/*initramfs-kernel.bin
