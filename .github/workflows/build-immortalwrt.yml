@@ -36,7 +36,7 @@ jobs:
           cd "$IB"
           make image \
             PROFILE="asus_rt-ac57u-v1" \
-            PACKAGES="luci luci-i18n-base-zh-cn luci-i18n-firewall-zh-cn luci-app-passwall luci-i18n-passwall-zh-cn shadowsocksr-libev-ssr-redir -dnsmasq dnsmasq-full"
+            PACKAGES="luci luci-i18n-base-zh-cn luci-i18n-firewall-zh-cn luci-app-passwall luci-i18n-passwall-zh-cn -dnsmasq dnsmasq-full"
 
       - name: Show results
         run: |
