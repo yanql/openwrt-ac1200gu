@@ -1,0 +1,73 @@
+name: build-immortalwrt-ac1200gu-ssr
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Prepare tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses5-dev zstd unzip wget file
+
+      - name: Download ImmortalWrt ImageBuilder 24.10.6 (ramips/mt7621)
+        run: |
+          wget -q https://downloads.immortalwrt.org/releases/24.10.6/targets/ramips/mt7621/immortalwrt-imagebuilder-24.10.6-ramips-mt7621.Linux-x86_64.tar.zst
+          tar --use-compress-program=unzstd -xf immortalwrt-imagebuilder-24.10.6-ramips-mt7621.Linux-x86_64.tar.zst
+          mv immortalwrt-imagebuilder-24.10.6-ramips-mt7621.Linux-x86_64 ib
+          echo "IB=$PWD/ib" >> $GITHUB_ENV
+
+      - name: Patch rootfs.mk (fix IB empty-command syntax bug)
+        run: |
+          f="$PWD/ib/include/rootfs.mk"
+          sed -i 's|$(if $(IB),,awk|$(if $(IB),:,awk|' "$f"
+          echo "--- patched ---"; grep -n 'if $(IB)' "$f" || true
+
+      - name: Inject SSR core (shadowsocksr-libev) + build local index
+        run: |
+          cd "$IB"
+          mkdir -p dl
+          # SSR 核心来自 passwall_packages（含 ssr-redir / ssr-local），版本匹配 24.10 (openssl3/pcre2)
+          wget -q -O dl/pw.zip https://github.com/Openwrt-Passwall/openwrt-passwall2/releases/download/26.6.16-1/passwall_packages_ipk_mipsel_24kc.zip
+          unzip -o -q dl/pw.zip -d dl/pw
+          find dl/pw -name 'shadowsocksr-libev-ssr-redir*.ipk' -exec cp -f {} packages/ \;
+          find dl/pw -name 'shadowsocksr-libev-ssr-local*.ipk' -exec cp -f {} packages/ \;
+          # 生成本地 opkg 索引，使本地 ipk 可被发现
+          ./scripts/ipkg-make-index.sh packages/ > packages/Packages 2>/dev/null || true
+          # 本地 ipk 无签名，关闭签名校验
+          sed -i 's/^option check_signature/# option check_signature/' repositories.conf || true
+          echo "=== 注入的本地 ipk ==="; ls -l packages/*.ipk
+          echo "=== 本地索引条目 ==="; grep -c '^Package:' packages/Packages || echo 0
+          grep '^Package:' packages/Packages || true
+
+      - name: Show available profiles
+        run: |
+          cd "$IB"
+          make info | grep -A4 "asus_rt-ac57u-v1"
+
+      - name: Build firmware (PassWall + SSR 核心 + 一键订阅)
+        run: |
+          cd "$IB"
+          make image \
+            PROFILE="asus_rt-ac57u-v1" \
+            PACKAGES="luci luci-i18n-base-zh-cn luci-i18n-firewall-zh-cn luci-app-passwall luci-i18n-passwall-zh-cn shadowsocksr-libev-ssr-redir shadowsocksr-libev-ssr-local simple-obfs-client -dnsmasq dnsmasq-full"
+
+      - name: Show results
+        run: |
+          cd "$IB"
+          echo "=== 产物 ==="
+          ls -lh bin/targets/ramips/mt7621/*.bin
+          echo "=== sysupgrade 大小(闪存上限 16MB) ==="
+          ls -l bin/targets/ramips/mt7621/*sysupgrade.bin | awk '{printf "%.2f MB\n", $5/1024/1024}'
+          echo "=== 已安装包清单(核对 SSR 核心 + PassWall) ==="
+          cat bin/targets/ramips/mt7621/*.manifest | grep -iE "passwall|shadowsocksr|simple-obfs|xray|sing-box" || true
+
+      - name: Upload firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: immortalwrt-ac1200gu-ssr
+          path: |
+            ${{ env.IB }}/bin/targets/ramips/mt7621/*sysupgrade.bin
+            ${{ env.IB }}/bin/targets/ramips/mt7621/*.manifest
